@@ -20,7 +20,7 @@ ADD (unit_price_tax AS (unit_price/100*5)
 );
 
 ALTER TABLE sales
-ADD (unit_price_and_tax AS (unit_price + unit_price/100*5)
+ADD (unit_price_and_tax AS (unit_price + tax/100*5)
 );
 ___________________________
 Procedures
