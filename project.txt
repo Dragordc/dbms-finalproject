@@ -22,8 +22,70 @@ ADD (unit_price_tax AS (unit_price/100*5)
 ALTER TABLE sales
 ADD (unit_price_and_tax AS (unit_price + unit_price/100*5)
 );
-________________________________________
--------for ex we want to watch which product lines consists in branch A-----------
+___________________________
+Procedures
+
+----------------function 1----------
+create or replace function get_count
+(v_branch in supermarket.branch%type)
+return number is 
+v_person number;
+begin
+select count(invoice_id) into v_person from supermarket 
+where branch = v_branch;
+return v_person;
+end;
+begin
+dbms_output.put_line(get_count('A'));
+end;
+
+
+---------------procedure-----------------
+create or replace procedure count
+(product in sales.product_line%type,
+ tax out sales.tax%type)  is
+begin
+select max(tax) into tax from sales
+where product_line = product;
+end;
+
+-------------------procedure----------------------
+create or replace procedure info_about(v_invoice_id sales.invoice_id%type, v_city sales.city%type, v_customer_type sales.customer_type%type, v_gender sales.gender%type)
+is
+begin
+   insert into sales(invoice_id, city, customer_type, gender) values (v_invoice_id, v_city, v_customer_type, v_gender);
+end info_about;
+
+-------------procedure----------
+CREATE OR REPLACE PROCEDURE get_from_branch(v_branch in sales.branch%type, v_product_line out sales.product_line%type) is
+BEGIN
+    SELECT product_line, branch into v_product_line, v_branch
+    FROM sales
+    WHERE branch = v_branch;
+END;
+
+
+Collections
+
+----------1---------------
+
+create or replace procedure get_total(inv_id sales.invoice_id%type) is
+type t_sup is table of sales%rowtype index by binary_integer;
+v_super t_sup;
+v_total sales.total%type;
+begin
+select * bulk collect into v_super from sales
+where invoice_id =inv_id;
+for i in v_super.first..v_super.last loop
+exit when i>v_super.last;
+dbms_output.put_line(v_super(i).total);
+end loop;
+end;
+
+
+Cursors
+
+-------1 for ex we want to watch which product lines consists in branch A-----------
 DECLARE
 CURSOR cur_product_line IS
 SELECT product_line FROM sales WHERE branch = 'A'
@@ -38,7 +100,9 @@ DBMS_OUTPUT.PUT_LINE(v_product_line);
 END LOOP;
 CLOSE cur_product_line;
 END;
--------------------------for ex we want to count how many normal and member in branch A---
+
+
+-------------------------2for ex we want to count how many normal and member in branch A---
 set SERVEROUTPUT ON;
 DECLARE
 CURSOR cur_customer IS
@@ -53,8 +117,9 @@ EXIT WHEN cur_customer%NOTFOUND;
 DBMS_OUTPUT.PUT_LINE(v_customer_type.customer_type||' '|| v_customer_type.count_type);
 END LOOP;
 CLOSE cur_customer;
-END;-
--------------------------for ex we want to find out how many male/female in all rows---
+END;
+
+-------------------------3for ex we want to find out how many male/female in all rows---
 set SERVEROUTPUT ON;
 DECLARE
 CURSOR cur_gender IS
@@ -70,7 +135,8 @@ DBMS_OUTPUT.PUT_LINE(v_gender.gender||' '|| v_gender.count_type);
 END LOOP;
 CLOSE cur_gender;
 END;
----------------for ex we want to see statistics about payment----
+
+---------------4for ex we want to see statistics about payment----
 set SERVEROUTPUT ON;
 DECLARE
 CURSOR cur_pay IS
@@ -86,7 +152,11 @@ DBMS_OUTPUT.PUT_LINE(v_payment.payment||' '|| v_payment.count_type);
 END LOOP;
 CLOSE cur_pay;
 END;
-__________________________________________________
+
+Packages
+
+Triggers 
+
 CREATE OR REPLACE TRIGGER
 prevent_drop_trigg
 BEFORE DROP ON SCHEMA
@@ -114,4 +184,63 @@ AFTER UPDATE ON sales FOR EACH ROW
 BEGIN
 INSERT INTO sales_log(USER_NAME, DATE_OF_CHANGES, TYPE_OF_CHANGES)
 VALUES (USER, SYSDATE, 'UPDATING');
+END;
+
+
+Dynamic SQL
+
+-------------1--------------
+
+CREATE PROCEDURE
+drop_any_column(p_column_name VARCHAR2)IS
+BEGIN
+EXECUTE IMMEDIATE 'DROP COLUMN' || p_COLUMN_name;
+END;
+
+-------------------2---------------
+
+CREATE or replace PROCEDURE add_info(p_table_name VARCHAR2, v_invoice_id sales.invoice_id%type, v_city sales.city%type, v_customer_type sales.customer_type%type, v_gender sales.gender%type) IS
+BEGIN
+EXECUTE IMMEDIATE 'INSERT INTO ' || p_table_name|| '(invoice_id, city, customer_type, gender) (VALUES(' || v_invoice_id|| ', ''' || v_city||' , ''' || v_customer_type|| ',''' || v_gender|| ''')';
+END;
+
+-------------------3---------------
+
+create or replace procedure get_total(inv_id sales.invoice_id%type) is
+type t_sup is table of sales%rowtype index by binary_integer;
+v_super t_sup;
+v_total sales.total%type;
+begin
+select * bulk collect into v_super from sales
+where invoice_id =inv_id;
+for i in v_super.first..v_super.last loop
+exit when i>v_super.last;
+dbms_output.put_line(v_super(i).total);
+end loop;
+end;
+
+
+CREATE OR REPLACE PROCEDURE p_print (p_percent NUMBER) IS
+TYPE numlist_type IS TABLE OF supermarket.invoice_id%type
+INDEX BY BINARY_INTEGER;
+v_id numlist_type; -- collection
+BEGIN
+v_id(1) := '750-67-8428';
+v_id(2) := '226-31-3081';
+v_id(3) := '631-41-3108';
+v_id(4) := '123-19-1176';
+
+-- bulk-bind the associative array
+FORALL i IN v_id.FIRST .. v_id.LAST
+UPDATE supermarket
+SET tax = (1 + p_percent / 100) * tax
+WHERE invoice_id =v_id(i);
+END;
+SELECT tax
+FROM supermarket 
+where
+invoice_id = '750-67-8428' OR invoice_id = '226-31-3081'
+OR invoice_id = '631-41-3108' OR invoice_id = '123-19-1176';
+BEGIN
+p_print(50);
 END;
