@@ -164,36 +164,8 @@ BEGIN
 RAISE_APPLICATION_ERROR
 (-20203, 'Attempted drop – failed');
 END;
------------------1-------------------
-create or replace trigger log_user_insert
-after insert on supermarket for each row 
-declare
-v_name varchar(20);
-v_has numeric;
-v_id numeric;
-begin
-select sys.login_user into v_name from dual;
-  select count(user_log.id) into v_has from user_log;
-  if v_has = 0 then
-  v_id := 0 ;
-  else
-  select max(user_log.id) into v_id from user_log;
-  end if;
-  insert into user_log
-  values(v_id+1,sysdate,:old.id,:new.id,:old.name,:new.name,'INSERT',v_name);
-end;
-create table user_log(
-ID number,
-OPERATION_DATE date,
-OLD_ID number,
-NEW_ID number,
-OLD_NAME varchar2(20),
-NEW_NAME varchar2(20),
-ACTION varchar2(10),
-AUTHOR varchar2(20)
-);
 
--------2-----------
+-------table-----------
 create table user_log(
 ID number,
 OPERATION_DATE date,
@@ -204,7 +176,7 @@ NEW_NAME varchar2(20),
 ACTION varchar2(10),
 AUTHOR varchar2(20)
 );
-1.
+---------------1--------------
 create or replace trigger log_user_insert
 after insert on user1 for each row 
 declare
