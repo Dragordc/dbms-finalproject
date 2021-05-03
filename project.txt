@@ -16,11 +16,10 @@ SELECT *
 
 /-----------2 columns-------------/
 ALTER TABLE sales
-ADD (unit_price_tax AS (unit_price/100*5)
+ADD (total_revenue AS (cogs+gross_income)
 );
-
 ALTER TABLE sales
-ADD (unit_price_and_tax AS (unit_price + unit_price/100*5)
+ADD (cogs_percentage AS (cogs*100/(cogs+gross_income))
 );
 ___________________________
 Procedures
