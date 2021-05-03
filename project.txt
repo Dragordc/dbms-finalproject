@@ -1,0 +1,117 @@
+/set primary key/
+
+ALTER TABLE sales 
+ADD PRIMARY KEY (invoice_ID); 
+
+/-----------See the constraints----------/
+
+SELECT * 
+  FROM ALL_CONSTRAINTS 
+ WHERE table_name = 'sales'; 
+
+SELECT * 
+  FROM user_cons_columns 
+ WHERE table_name = 'sales';
+
+
+/-----------2 columns-------------/
+ALTER TABLE sales
+ADD (unit_price_tax AS (unit_price/100*5)
+);
+
+ALTER TABLE sales
+ADD (unit_price_and_tax AS (unit_price + unit_price/100*5)
+);
+________________________________________
+-------for ex we want to watch which product lines consists in branch A-----------
+DECLARE
+CURSOR cur_product_line IS
+SELECT product_line FROM sales WHERE branch = 'A'
+group by product_line;
+v_product_line sales.product_line%TYPE;
+BEGIN
+OPEN cur_product_line;
+LOOP
+FETCH cur_product_line INTO v_product_line;
+EXIT WHEN cur_product_line%NOTFOUND;
+DBMS_OUTPUT.PUT_LINE(v_product_line);
+END LOOP;
+CLOSE cur_product_line;
+END;
+-------------------------for ex we want to count how many normal and member in branch A---
+set SERVEROUTPUT ON;
+DECLARE
+CURSOR cur_customer IS
+SELECT customer_type, Count(*) as count_type FROM sales WHERE branch = 'A'
+group by customer_type;
+v_customer_type cur_customer%ROWTYPE;
+BEGIN
+OPEN cur_customer;
+LOOP
+FETCH cur_customer INTO v_customer_type;
+EXIT WHEN cur_customer%NOTFOUND;
+DBMS_OUTPUT.PUT_LINE(v_customer_type.customer_type||' '|| v_customer_type.count_type);
+END LOOP;
+CLOSE cur_customer;
+END;-
+-------------------------for ex we want to find out how many male/female in all rows---
+set SERVEROUTPUT ON;
+DECLARE
+CURSOR cur_gender IS
+SELECT gender, Count(*) as count_type FROM sales
+group by gender;
+v_gender cur_gender%ROWTYPE;
+BEGIN
+OPEN cur_gender;
+LOOP
+FETCH cur_gender INTO v_gender;
+EXIT WHEN cur_gender%NOTFOUND;
+DBMS_OUTPUT.PUT_LINE(v_gender.gender||' '|| v_gender.count_type);
+END LOOP;
+CLOSE cur_gender;
+END;
+---------------for ex we want to see statistics about payment----
+set SERVEROUTPUT ON;
+DECLARE
+CURSOR cur_pay IS
+SELECT payment, Count(*) as count_type FROM sales
+group by payment;
+v_payment cur_pay%ROWTYPE;
+BEGIN
+OPEN cur_pay;
+LOOP
+FETCH cur_pay INTO v_payment;
+EXIT WHEN cur_pay%NOTFOUND;
+DBMS_OUTPUT.PUT_LINE(v_payment.payment||' '|| v_payment.count_type);
+END LOOP;
+CLOSE cur_pay;
+END;
+__________________________________________________
+CREATE OR REPLACE TRIGGER
+prevent_drop_trigg
+BEFORE DROP ON SCHEMA
+BEGIN
+RAISE_APPLICATION_ERROR
+(-20203, 'Attempted drop – failed');
+END;
+
+CREATE OR REPLACE TRIGGER del_sales_values
+AFTER DELETE ON sales FOR EACH ROW
+BEGIN
+INSERT INTO sales_log(USER_NAME, DATE_OF_CHANGES, TYPE_OF_CHANGES)
+VALUES (USER, SYSDATE, 'DELETION');
+END;
+
+CREATE OR REPLACE TRIGGER ins_sales_values
+AFTER INSERT ON sales FOR EACH ROW
+BEGIN
+INSERT INTO sales_log(USER_NAME, DATE_OF_CHANGES, TYPE_OF_CHANGES)
+VALUES (USER, SYSDATE, 'INSERTING');
+END;
+
+CREATE OR REPLACE TRIGGER upd_sales_values
+AFTER UPDATE ON sales FOR EACH ROW
+BEGIN
+INSERT INTO sales_log(USER_NAME, DATE_OF_CHANGES, TYPE_OF_CHANGES)
+VALUES (USER, SYSDATE, 'UPDATING');
+END;
