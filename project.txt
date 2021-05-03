@@ -15,13 +15,13 @@ SELECT *
 
 
 /-----------2 columns-------------/
+Unit_price_and_tax
 ALTER TABLE sales
-ADD (unit_price_tax AS (unit_price/100*5)
-);
+ADD (unit_price_and_tax AS ((tax + unit_price)/100*5));
 
+Unit_price
 ALTER TABLE sales
-ADD (unit_price_and_tax AS (unit_price + unit_price/100*5)
-);
+ADD (unit_price AS (unit_price/100*5));
 ___________________________
 Procedures
 
